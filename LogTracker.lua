@@ -92,7 +92,7 @@ function LogTracker:InitLogsFrame()
   elseif (urlRegionId == 5) then
     urlRegion = "ch";
   end
-  local urlBase = "https://classic.warcraftlogs.com/character/"..urlRegion.."/"..strlower(GetRealmName()).."/";
+  local urlBase = "https://classic.warcraftlogs.com/character/"..urlRegion.."/"..string.gsub(strlower(GetRealmName()), " ", "-").."/";
   self.warcraftlogsFrame = CreateFrame("Frame", nil, UIParent, "DialogBorderTemplate");
   self.warcraftlogsFrame:ClearAllPoints();
   self.warcraftlogsFrame:SetPoint("TOPLEFT", 50, -50);
