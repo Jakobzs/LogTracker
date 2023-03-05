@@ -6,11 +6,13 @@ function LogTracker:Init()
   self.debug = false;
   self.defaults = {
     chatExtension = true,
+    whisperExtension = true,
     tooltipExtension = true,
     lfgExtension = true,
     slashExtension = true,
     hide10Player = false,
-    hide25Player = false
+    hide25Player = false,
+    hideVOA = false
   };
   self.activityDetails = {
     -- Naxxramas 10-man
@@ -75,10 +77,12 @@ function LogTracker:Init()
     },
   };
   self.db = CopyTable(self.defaults);
+  self.whisperers = {};
   self:LogDebug("Init");
   self:SetScript("OnEvent", self.OnEvent);
   self:RegisterEvent("ADDON_LOADED");
   self:RegisterEvent("CHAT_MSG_SYSTEM");
+  self:RegisterEvent("CHAT_MSG_WHISPER");
   self:RegisterEvent("MODIFIER_STATE_CHANGED");
   self:RegisterEvent("PLAYER_ENTERING_WORLD");
   --self:RegisterEvent("UPDATE_MOUSEOVER_UNIT");
@@ -226,10 +230,17 @@ function LogTracker:InitOptions()
 	self.optionCheckChat:SetScript("OnClick", function()
 		self.db.chatExtension = self.optionCheckChat:GetChecked();
 	end)
-	self.optionCheckChat:SetChecked(self.db.chatExtension);
+  -- Whisper integration
+  self.optionCheckWhisper = CreateFrame("CheckButton", nil, self.optionsPanel, "InterfaceOptionsCheckButtonTemplate");
+  self.optionCheckWhisper:SetPoint("TOPLEFT", 20, -40);
+  self.optionCheckWhisper.Text:SetText(L["OPTION_WHISPER"]);
+  self.optionCheckWhisper:SetScript("OnClick", function()
+    self.db.whisperExtension = self.optionCheckWhisper:GetChecked();
+  end)
+	self.optionCheckWhisper:SetChecked(self.db.whisperExtension);
   -- Player tooltip integration
   self.optionCheckTooltip = CreateFrame("CheckButton", nil, self.optionsPanel, "InterfaceOptionsCheckButtonTemplate");
-	self.optionCheckTooltip:SetPoint("TOPLEFT", 20, -40);
+	self.optionCheckTooltip:SetPoint("TOPLEFT", 20, -60);
 	self.optionCheckTooltip.Text:SetText(L["OPTION_TOOLTIP"]);
 	self.optionCheckTooltip:SetScript("OnClick", function()
 		self.db.tooltipExtension = self.optionCheckTooltip:GetChecked();
@@ -237,7 +248,7 @@ function LogTracker:InitOptions()
 	self.optionCheckTooltip:SetChecked(self.db.tooltipExtension);
   -- Player tooltip integration
   self.optionCheckLFG = CreateFrame("CheckButton", nil, self.optionsPanel, "InterfaceOptionsCheckButtonTemplate");
-	self.optionCheckLFG:SetPoint("TOPLEFT", 20, -60);
+	self.optionCheckLFG:SetPoint("TOPLEFT", 20, -80);
 	self.optionCheckLFG.Text:SetText(L["OPTION_LFG"]);
 	self.optionCheckLFG:SetScript("OnClick", function(_, value)
 		self.db.lfgExtension = self.optionCheckLFG:GetChecked();
@@ -245,7 +256,7 @@ function LogTracker:InitOptions()
 	self.optionCheckLFG:SetChecked(self.db.lfgExtension);
   -- Slash command
   self.optionCheckSlash = CreateFrame("CheckButton", nil, self.optionsPanel, "InterfaceOptionsCheckButtonTemplate");
-	self.optionCheckSlash:SetPoint("TOPLEFT", 20, -80);
+	self.optionCheckSlash:SetPoint("TOPLEFT", 20, -100);
 	self.optionCheckSlash.Text:SetText(L["OPTION_SLASH_CMD"]);
 	self.optionCheckSlash:SetScript("OnClick", function(_, value)
 		self.db.slashExtension = self.optionCheckSlash:GetChecked();
@@ -253,7 +264,7 @@ function LogTracker:InitOptions()
 	self.optionCheckSlash:SetChecked(self.db.slashExtension);
   -- Show 10 player logs
   self.optionHide10Player = CreateFrame("CheckButton", nil, self.optionsPanel, "InterfaceOptionsCheckButtonTemplate");
-	self.optionHide10Player:SetPoint("TOPLEFT", 20, -100);
+	self.optionHide10Player:SetPoint("TOPLEFT", 20, -120);
 	self.optionHide10Player.Text:SetText(L["OPTION_HIDE_10_PLAYER"]);
 	self.optionHide10Player:SetScript("OnClick", function(_, value)
 		self.db.hide10Player = self.optionHide10Player:GetChecked();
@@ -261,22 +272,20 @@ function LogTracker:InitOptions()
 	self.optionHide10Player:SetChecked(self.db.hide10Player);
   -- Show 25 player logs
   self.optionHide25Player = CreateFrame("CheckButton", nil, self.optionsPanel, "InterfaceOptionsCheckButtonTemplate");
-	self.optionHide25Player:SetPoint("TOPLEFT", 20, -120);
+	self.optionHide25Player:SetPoint("TOPLEFT", 20, -140);
 	self.optionHide25Player.Text:SetText(L["OPTION_HIDE_25_PLAYER"]);
 	self.optionHide25Player:SetScript("OnClick", function(_, value)
 		self.db.hide25Player = self.optionHide25Player:GetChecked();
 	end)
 	self.optionHide25Player:SetChecked(self.db.hide25Player);
-
-
 	--show VOA logs
 	self.optionHideVOA = CreateFrame("CheckButton", nil, self.optionsPanel, "InterfaceOptionsCheckButtonTemplate");
-    self.optionHideVOA:SetPoint("TOPLEFT", 20, -140);
-    self.optionHideVOA.Text:SetText(L["OPTION_HIDE_VOA"]);
-    self.optionHideVOA:SetScript("OnClick", function(_, value)
-    	self.db.hideVOA = self.optionHideVOA:GetChecked();
-    end)
-    self.optionHideVOA:SetChecked(self.db.hideVOA);
+  self.optionHideVOA:SetPoint("TOPLEFT", 20, -160);
+  self.optionHideVOA.Text:SetText(L["OPTION_HIDE_VOA"]);
+  self.optionHideVOA:SetScript("OnClick", function(_, value)
+    self.db.hideVOA = self.optionHideVOA:GetChecked();
+  end)
+  self.optionHideVOA:SetChecked(self.db.hideVOA);
 end
 
 function LogTracker:LogOutput(...)
@@ -315,6 +324,8 @@ function LogTracker:OnEvent(event, ...)
     self:OnAddonLoaded(...);
   elseif (event == "CHAT_MSG_SYSTEM") then
     self:OnChatMsgSystem(...);
+  elseif (event == "CHAT_MSG_WHISPER") then
+    self:OnChatMsgWhisper(...);
   elseif (event == "UPDATE_MOUSEOVER_UNIT") then
     self:OnMouseoverUnit(...);
   elseif (event == "MODIFIER_STATE_CHANGED") then
@@ -364,6 +375,25 @@ function LogTracker:OnChatMsgSystem(text)
     if playerData then
       self:SendPlayerInfoToChat(playerData, playerName, playerRealm);
     end
+  end
+end
+
+function LogTracker:OnChatMsgWhisper(...)
+  if not self.db.whisperExtension then
+    return
+  end
+  local _,name = ...
+  if not name then
+    return
+  end
+  local name, realmName = strsplit("-", name)
+  if self.whisperers[name] then
+    return
+  end
+  self.whisperers[name] = true
+  local playerData, playerName, playerRealm = self:GetPlayerData(name)
+  if playerData then
+    self:SendPlayerInfoToChat(playerData, playerName, playerRealm)
   end
 end
 
