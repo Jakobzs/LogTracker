@@ -43,7 +43,7 @@ function LogTracker:Init()
     [1106] = {
       zone = 1017,
       size = 10,
-      encounters = { 745, 746, 747, 748, 749, 750, 751, 752, 753, 754, 755, 756, 757 }
+      encounters = { 745, 746, 747, 748, 749, 750, 752, 753, 754, 755, 756, 757 }
     },
     -- Naxxramas 25-man
     [1098] = {
@@ -73,7 +73,7 @@ function LogTracker:Init()
     [1107] = {
       zone = 1017,
       size = 25,
-      encounters = { 745, 746, 747, 748, 749, 750, 751, 752, 753, 754, 755, 756, 757 }
+      encounters = { 745, 746, 747, 748, 749, 750, 752, 753, 754, 755, 756, 757 }
     },
   };
   self.db = CopyTable(self.defaults);
