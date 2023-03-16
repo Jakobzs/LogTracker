@@ -770,6 +770,9 @@ function LogTracker:SetPlayerInfoTooltip(playerData, playerName, playerRealm, di
           );
           if IsShiftKeyDown() then
             for _, encounter in ipairs(zone.encounters) do
+              if zoneId ~= "1017" then -- Show only for Ulduar
+                break
+              end
               local encounterName, encounterRating = self:GetPlayerEncounterPerformance(encounter, playerData.class, true);
               GameTooltip:AddDoubleLine(
                 "  "..encounterName, encounterRating,
